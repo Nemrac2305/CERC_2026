@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Metoda Simplex Revizuită</title>
+  <style>
+    :root {
+      --bg: #eef3f9;
+      --paper: rgba(255,255,255,0.92);
+      --ink: #17263a;
+      --muted: #5d6d82;
+      --line: #d8e2ef;
+      --blue: #163f73;
+      --blue-2: #2a6aa9;
+      --teal: #0e8b8d;
+      --green: #1b936a;
+      --gold: #b38b2c;
+      --red: #b44d4d;
+      --shadow: 0 16px 40px rgba(20, 41, 72, 0.08);
+      --radius: 26px;
+      --radius-sm: 16px;
+      --maxw: 1600px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background:
+        radial-gradient(circle at top right, rgba(42,106,169,0.10), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(14,139,141,0.08), transparent 20%),
+        linear-gradient(180deg, #f7fbff 0%, #eef3f9 100%);
+      color: var(--ink);
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+    }
+
+    body { padding: 30px; }
+
+    .board {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      display: grid;
+      gap: 24px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(145deg, #173962 0%, #163f73 60%, #2b6ca9 100%);
+      color: white;
+      border-radius: 34px;
+      padding: 34px 36px 30px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -55px;
+      top: -55px;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.16), rgba(255,255,255,0.02) 65%, transparent 70%);
+    }
+
+    .kicker {
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      font-size: 12px;
+      font-weight: 800;
+      opacity: 0.82;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(38px, 5vw, 58px);
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin-top: 14px;
+      max-width: 1100px;
+      font-size: clamp(17px, 2vw, 22px);
+      line-height: 1.48;
+      color: rgba(255,255,255,0.93);
+    }
+
+    .hero-grid {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .hero-pill {
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.08);
+      min-width: 0;
+    }
+
+    .hero-pill strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 5px;
+    }
+
+    .hero-pill span {
+      display: block;
+      font-size: 13px;
+      line-height: 1.42;
+      color: rgba(255,255,255,0.88);
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+      align-items: start;
+    }
+
+    .card {
+      min-width: 0;
+      background: var(--paper);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px 24px 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, var(--blue), var(--blue-2), var(--teal));
+    }
+
+    .card.wide { grid-column: 1 / -1; }
+
+    .head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .num {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg, var(--blue), var(--blue-2));
+      color: white;
+      font-size: 15px;
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+
+    h2 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(25px, 2vw, 34px);
+      line-height: 1.14;
+      letter-spacing: -0.01em;
+    }
+
+    p {
+      margin: 0 0 12px;
+      font-size: 16px;
+      line-height: 1.58;
+      color: var(--ink);
+    }
+
+    .small {
+      font-size: 14px;
+      line-height: 1.52;
+      color: var(--muted);
+    }
+
+    .eq {
+      margin: 14px 0;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid #d6e3f0;
+      background: linear-gradient(180deg, #f7fbff 0%, #edf4fb 100%);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 23px;
+      line-height: 1.45;
+      color: #193a61;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+
+    .label {
+      display: inline-block;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 800;
+      font-size: 12px;
+      color: var(--blue);
+    }
+
+    .callout {
+      border-radius: 18px;
+      padding: 16px 18px;
+      border: 1px solid rgba(22,63,115,0.15);
+      background: linear-gradient(135deg, rgba(22,63,115,0.08), rgba(14,139,141,0.03));
+    }
+
+    .callout.warn {
+      border-color: rgba(179,139,44,0.28);
+      background: linear-gradient(135deg, rgba(179,139,44,0.10), rgba(255,255,255,0.8));
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .mini {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.85);
+      padding: 14px 16px;
+      min-width: 0;
+    }
+
+    .mini strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--blue);
+      font-size: 15px;
+    }
+
+    .steps {
+      display: grid;
+      gap: 10px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    }
+
+    .step-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 1px solid #cfe0f2;
+      background: #edf4fb;
+      color: var(--blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .step strong {
+      display: block;
+      color: var(--blue);
+      margin-bottom: 3px;
+      font-size: 16px;
+    }
+
+    ul.clean {
+      margin: 0;
+      padding-left: 20px;
+      font-size: 16px;
+      line-height: 1.54;
+    }
+
+    ul.clean li { margin-bottom: 8px; }
+
+    .outcomes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .outcome {
+      border-radius: 18px;
+      padding: 16px 18px;
+      background: rgba(255,255,255,0.88);
+      border: 1px solid var(--line);
+      border-left: 8px solid var(--blue-2);
+      min-width: 0;
+    }
+
+    .outcome h3 {
+      margin: 0 0 6px;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      font-size: 20px;
+      color: var(--blue);
+    }
+
+    .outcome p {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .outcome.opt { border-left-color: var(--green); }
+    .outcome.inf { border-left-color: var(--gold); }
+    .outcome.unb { border-left-color: var(--red); }
+
+    .footer {
+      display: grid;
+      grid-template-columns: 1.4fr auto;
+      gap: 18px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .tags {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .tags span {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.76);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: #506176;
+    }
+
+    @media (max-width: 1100px) {
+      body { padding: 18px; }
+      .hero-grid, .main-grid, .outcomes, .split, .footer {
+        grid-template-columns: 1fr;
+      }
+      .card.wide { grid-column: auto; }
+      .tags { justify-content: flex-start; }
+      .eq { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <section class="hero">
+      <div class="kicker">Sinteză academică</div>
+      <h1>Metoda Simplex Revizuită</h1>
+      <div class="subtitle">
+        O sinteză academică compactă a metodei simplex revizuite, de la formularea în formă standard și calculul costurilor reduse
+        până la alegerea pivotului, tratarea degenerării și cele trei rezultate finale ale algoritmului.
+      </div>
+      <div class="hero-grid">
+        <div class="hero-pill"><strong>Standardizare</strong><span>variabile de slack, variabile de surplus, variabile artificiale și penalizarea Big-M</span></div>
+        <div class="hero-pill"><strong>Calculul costurilor reduse</strong><span>multiplicatori simplex, costuri reduse și criteriul variabilei care intră în bază</span></div>
+        <div class="hero-pill"><strong>Fezabilitate</strong><span>direcția de căutare, testul raportului și alegerea variabilei care iese din bază</span></div>
+        <div class="hero-pill"><strong>Convergență</strong><span>soluție optimă, problemă infezabilă sau optim infinit / problemă neacotată</span></div>
+      </div>
+    </section>
+
+    <section class="main-grid">
+      <article class="card">
+        <div class="head"><span class="num">1</span><h2>Problema în Formă Standard</h2></div>
+        <p>
+          Metoda simplex revizuită operează asupra unei probleme de programare liniară scrise într-o formă compatibilă cu algoritmul:
+          constrângeri de egalitate și variabile nenegative.
+        </p>
+        <div class="eq">minimizare <strong>f = c<sup>T</sup>x</strong> &nbsp;&nbsp; supusă la <strong>Ax = b</strong>, &nbsp;<strong>x ≥ 0</strong></div>
+        <p class="small">
+          Constrângerile de tip ≤ introduc <em>variabile de slack</em>. Constrângerile de tip ≥ introduc <em>variabile de surplus</em> și,
+          atunci când este necesar, variabile artificiale pentru a construi o bază inițială admisibilă.
+        </p>
+        <div class="callout warn">
+          <div class="label">Principiul Big-M</div>
+          <p>
+            Variabilele artificiale sunt penalizate în funcția obiectiv printr-un termen de forma <strong>M · Σa<sub>art</sub></strong>,
+            astfel încât algoritmul să le elimine din soluția finală. În prezentarea sursă, această barieră este scalată dinamic
+            în raport cu mărimea coeficienților reali.
+          </p>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="head"><span class="num">2</span><h2>Structura Matricială de Bază</h2></div>
+        <p>
+          Matricea constrângerilor este descompusă în coloane de bază și coloane nebazice. Această separare reprezintă esența metodei revizuite,
+          deoarece permite actualizări eficiente fără construirea întregului tablou simplex.
+        </p>
+        <div class="eq">A = [B &nbsp; N], &nbsp;&nbsp; x = [x<sub>B</sub>, x<sub>N</sub>]<sup>T</sup>, &nbsp;&nbsp; x<sub>B</sub> = B<sup>−1</sup>b</div>
+        <div class="split">
+          <div class="mini">
+            <strong>Ce se menține</strong>
+            <p class="small">baza curentă <strong>B</strong>, soluția de bază <strong>x<sub>B</sub></strong>, costurile reduse și coloana transformată asociată variabilei care intră în bază.</p>
+          </div>
+          <div class="mini">
+            <strong>De ce este eficientă</strong>
+            <p class="small">metoda lucrează cu sisteme liniare și factorizări ale lui <strong>B</strong>, în loc să actualizeze fiecare rând și fiecare coloană ale tabloului simplex clasic.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="head"><span class="num">3</span><h2>Multiplicatori Simplex și Costuri Reduse</h2></div>
+        <p>
+          Informația duală este extrasă din baza curentă. Multiplicatorii simplex reprezintă prețurile implicite ale constrângerilor,
+          iar costurile reduse indică dacă o variabilă nebazică poate îmbunătăți funcția obiectiv.
+        </p>
+        <div class="eq">B<sup>T</sup>π = c<sub>B</sub> &nbsp;&nbsp;⇔&nbsp;&nbsp; π<sup>T</sup> = c<sub>B</sub><sup>T</sup>B<sup>−1</sup></div>
+        <div class="eq">r<sub>j</sub> = π<sup>T</sup>a<sub>j</sub> − c<sub>j</sub></div>
+        <p class="small">
+          În convenția de semn adoptată aici, soluția curentă este optimă dacă <strong>r<sub>j</sub> ≤ 0</strong> pentru fiecare variabilă nebazică.
+          Dacă există un <strong>r<sub>s</sub> &gt; 0</strong>, atunci coloana <strong>a<sub>s</sub></strong> este selectată pentru a intra în bază.
+        </p>
+      </article>
+
+      <article class="card">
+        <div class="head"><span class="num">4</span><h2>Ciclul Iterativ al Metodei Revizuite</h2></div>
+        <div class="steps">
+          <div class="step"><div class="step-badge">1</div><div><strong>Standardizare</strong>transformarea constrângerilor în egalități și construirea unei baze inițiale fezabile.</div></div>
+          <div class="step"><div class="step-badge">2</div><div><strong>Calculul costurilor reduse</strong>calcularea multiplicatorilor <strong>π</strong> și a costurilor reduse <strong>r</strong>; alegerea variabilei care intră în bază.</div></div>
+          <div class="step"><div class="step-badge">3</div><div><strong>Direcția de căutare</strong>rezolvarea sistemului <strong>Bd = a<sub>s</sub></strong> pentru a determina modul în care se modifică soluția de bază.</div></div>
+          <div class="step"><div class="step-badge">4</div><div><strong>Testul raportului minim</strong>determinarea celui mai mare pas admisibil care păstrează fezabilitatea și identificarea variabilei care iese din bază.</div></div>
+          <div class="step"><div class="step-badge">5</div><div><strong>Actualizarea bazei</strong>înlocuirea coloanei care iese din bază cu cea care intră și repetarea ciclului până la îndeplinirea unei condiții finale de oprire.</div></div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="head"><span class="num">5</span><h2>Direcția de Căutare și Regula de Ieșire</h2></div>
+        <div class="eq">Bd = a<sub>s</sub> &nbsp;&nbsp;⇒&nbsp;&nbsp; d = B<sup>−1</sup>a<sub>s</sub></div>
+        <p>
+          Vectorul <strong>d</strong> descrie modul în care variabilele de bază se modifică atunci când variabila care intră în bază crește de la zero.
+          Pentru a păstra fezabilitatea, lungimea pasului este limitată prin testul raportului minim.
+        </p>
+        <div class="eq">θ<sup>*</sup> = min { (x<sub>B</sub>)<sub>i</sub> / d<sub>i</sub> &nbsp;|&nbsp; d<sub>i</sub> &gt; 0 }</div>
+        <p class="small">
+          Rândul care atinge minimul determină variabila care iese din bază. Astfel, noua soluție rămâne în interiorul regiunii fezabile,
+          deplasându-se în același timp într-o direcție care îmbunătățește funcția obiectiv.
+        </p>
+      </article>
+
+      <article class="card">
+        <div class="head"><span class="num">6</span><h2>Degenerare și Regula Lexicografică</h2></div>
+        <p>
+          În situații degenerate, mai multe rânduri pot produce același raport minim. O alegere arbitrară poate duce la <em>ciclare</em>,
+          adică algoritmul revizitează aceeași bază fără progres real.
+        </p>
+        <div class="callout">
+          <div class="label">Mecanismul anti-ciclare al lui Charnes</div>
+          <p>
+            Rândurile candidate sunt comparate în ordine lexicografică standardizată. Regula impune o alegere deterministă a pivotului și previne ciclarea.
+          </p>
+        </div>
+        <p class="small">
+          În practică, acest lucru plasează consistența matematică deasupra alegerilor arbitrare și face implementarea mai robustă
+          în cazurile-limită și în condiții de stres numeric.
+        </p>
+      </article>
+
+      <article class="card">
+        <div class="head"><span class="num">7</span><h2>Actualizarea Bazei și a Funcției Obiectiv</h2></div>
+        <p>
+          După selectarea variabilei care intră și a variabilei care iese din bază, baza este actualizată, iar soluția împreună cu indicatorii duali
+          sunt recalculați pentru următoarea iterație.
+        </p>
+        <div class="eq">x<sub>B</sub><sup>nou</sup> = x<sub>B</sub> − θ<sup>*</sup>d, &nbsp;&nbsp; x<sub>s</sub><sup>nou</sup> = θ<sup>*</sup></div>
+        <div class="eq">f<sup>nou</sup> = f − θ<sup>*</sup>r<sub>s</sub></div>
+        <p class="small">
+          Cu această convenție de semn, <strong>r<sub>s</sub> &gt; 0</strong> produce o scădere controlată a valorii funcției obiectiv într-o problemă de minimizare.
+        </p>
+      </article>
+
+      <article class="card">
+        <div class="head"><span class="num">8</span><h2>De ce „Revizuită” în locul unui Tablou Complet?</h2></div>
+        <ul class="clean">
+          <li>Reduce costul computațional prin evitarea construirii întregului tablou simplex la fiecare iterație.</li>
+          <li>Îmbunătățește stabilitatea numerică prin factorizări și rezolvări de sisteme liniare aplicate doar bazei curente.</li>
+          <li>Oferă transparență în raport cu mărimile-cheie: <strong>B</strong>, <strong>x<sub>B</sub></strong>, <strong>π</strong>, <strong>r</strong> și <strong>d</strong>.</li>
+          <li>Este potrivită pentru probleme de mari dimensiuni și pentru implementări care trebuie să evidențieze clar fiecare iterație.</li>
+        </ul>
+      </article>
+
+      <article class="card wide">
+        <div class="head"><span class="num">9</span><h2>Cele Trei Rezultate Finale</h2></div>
+        <p>
+          Procesul iterativ converge către exact una dintre situațiile de mai jos. Aceste rezultate încheie algoritmul în mod formal
+          și oferă interpretarea matematică finală a problemei.
+        </p>
+        <div class="outcomes">
+          <div class="outcome opt">
+            <h3>Soluție Optimă</h3>
+            <p>Toate costurile reduse satisfac criteriul de optimalitate și toate variabilele artificiale sunt zero. Problema inițială este fezabilă, iar optimul a fost atins.</p>
+          </div>
+          <div class="outcome inf">
+            <h3>Infezabilitate</h3>
+            <p>Criteriul de optimalitate este satisfăcut, însă cel puțin o variabilă artificială rămâne strict pozitivă. Concluzia este că sistemul inițial nu are soluție fezabilă.</p>
+          </div>
+          <div class="outcome unb">
+            <h3>Optim Infinit / Problemă Neacotată</h3>
+            <p>Există o variabilă care poate intra în bază, dar direcția de căutare permite o îmbunătățire nelimitată fără încălcarea constrângerilor. Funcția obiectiv nu este mărginită.</p>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="footer">
+      <div>
+        Sinteză teoretică de bază: standardizare, structură de bază, costuri reduse, logica pivotării, controlul degenerării și rezultate finale.
+      </div>
+      <div class="tags">
+        <span>Programare Liniară</span>
+        <span>Metoda Simplex Revizuită</span>
+        <span>Teoria Optimizării</span>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
